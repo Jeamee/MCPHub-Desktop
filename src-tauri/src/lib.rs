@@ -1,11 +1,9 @@
 mod api;
 
-
 use log::{debug, info};
 use tauri_plugin_log::{Target, TargetKind};
 
 use api::dependency::view as dependency_view;
-
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -29,7 +27,13 @@ pub fn run() {
                 ])
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, dependency_view::check_npm, dependency_view::install_npm])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            dependency_view::check_npm,
+            dependency_view::install_npm,
+            dependency_view::check_uv,
+            dependency_view::install_uv
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
