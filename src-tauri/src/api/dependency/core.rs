@@ -13,80 +13,76 @@ use tar::Archive;
 use xshell::{cmd, Shell};
 #[cfg(target_os = "windows")]
 use zip::ZipArchive;
+use tauri_plugin_store::StoreExt;
+use crate::APP_STATE_FILENAME;
 
 pub struct NpmHandler;
 pub struct UVHandler;
 
+fn get_home() -> Result<PathBuf> {
+    let current_home = home::home_dir().context("Failed to get home directory");
+    if let Ok(home_path) = &current_home {
+        trace!("Home directory: {}", home_path.to_string_lossy());
+    }
+    current_home
+}
+
+fn detect_shell() -> Result<String> {
+    #[cfg(target_os = "macos")]
+    {
+        let shell =
+            std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
+        let shell_name = std::path::Path::new(&shell)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|s| s.to_string())
+            .ok_or_else(|| anyhow!("Invalid shell path"))?;
+        trace!("Detected shell: {}", shell_name);
+        Ok(shell_name)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Ok("powershell".to_string())
+    }
+}
+
 impl NpmHandler {
-    fn get_home() -> Result<PathBuf> {
-        let current_home = home::home_dir().context("Failed to get home directory");
-        if let Ok(home_path) = &current_home {
-            trace!("Home directory: {}", home_path.to_string_lossy());
-        }
-        current_home
-    }
-
-    fn detect_shell() -> Result<String> {
-        #[cfg(target_os = "macos")]
-        {
-            let shell =
-                std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
-            let shell_name = std::path::Path::new(&shell)
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| anyhow!("Invalid shell path"))?;
-            trace!("Detected shell: {}", shell_name);
-            Ok(shell_name)
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            Ok("powershell".to_string())
-        }
-    }
-
-    pub fn detect() -> Result<bool> {
+    pub fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
+        let store = appHandle.store(APP_STATE_FILENAME).unwrap();
         let shell = Shell::new()?;
-        let shell_name = Self::detect_shell()?;
+        let shell_name = detect_shell()?;
 
+        let node_path = store.get("node_path").and_then(|s| s.as_str().map(String::from)).unwrap_or("".to_owned());
+        if (!node_path.is_empty()) {
+            if let Ok(metadata) = fs::metadata(&node_path) {
+                if metadata.is_dir() || metadata.is_symlink() {
+                    debug!("Node path exists: {}", node_path);
+                    return Ok(true);
+                }
+            }
+            debug!("Node path does not exist: {}", node_path);
+        }
         debug!("Running check node command");
 
         #[cfg(target_os = "macos")]
-        let cmd_output = cmd!(shell, "{shell_name} -ic 'which node'").read()?;
+        let cmd_output = cmd!(shell, "{shell_name} -ic 'which node'").quiet().read()?;
 
         #[cfg(target_os = "windows")]
-        let cmd_output = match cmd!(
-            shell,
-            "where.exe node"
-        )
-        .output()
-        {
-            Ok(output) => {
-                if !output.stderr.is_empty() {
-                    error!(
-                        "Command stderr: {}",
-                        String::from_utf8_lossy(&output.stderr)
-                    );
-                }
-                String::from_utf8_lossy(&output.stdout).to_string()
-            }
-            Err(e) => {
-                error!("Failed to execute 'Get-Command node': {}", e);
-                return Ok(false);
-            }
-        };
+        let cmd_output = cmd!(shell, "where.exe node").quiet().read()?;
 
         debug!("Node command output: {}", cmd_output);
-        let found = cmd_output.contains("node");
+        store.set("node_path", node_path);
+        store.set("use_system_node", true);
 
-        Ok(found)
+        Ok(true)
     }
 
-    pub async fn install() -> Result<()> {
+    pub async fn install(appHandle: &tauri::AppHandle) -> Result<()> {
         trace!("Installing Node.js");
+        let store = appHandle.store(APP_STATE_FILENAME)?;
         let shell = Shell::new()?;
-        let home_dir_str = Self::get_home()?.to_string_lossy().to_string();
+        let home_dir_str = get_home()?.to_string_lossy().to_string();
 
         #[cfg(target_os = "macos")]
         let (node_version, node_arch, node_dir_name, node_download_url) = {
@@ -152,136 +148,30 @@ impl NpmHandler {
             archive.extract(&node_dir)?;
         }
 
-        trace!("Configuring node");
-        let home_dir = Self::get_home()?;
-
-        #[cfg(target_os = "macos")]
-        {
-            let system_shell = Self::detect_shell()?;
-            trace!("System shell: {}", system_shell);
-
-            let config_file = match system_shell.as_str() {
-                "bash" => home_dir.join(".bash_profile"),
-                "zsh" => home_dir.join(".zshrc"),
-                "fish" => home_dir.join(".config/fish/config.fish"),
-                _ => return Err(anyhow!("Unsupported shell type")),
-            };
-
-            trace!("Config file path: {}", config_file.display());
-
-            // Create config file if it doesn't exist
-            if !config_file.exists() {
-                if let Some(parent) = config_file.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::File::create(&config_file)?;
-            }
-
-            // Check if PATH is already configured
-            let env_set_str = format!("export PATH=\"$HOME/.node/{}/bin:$PATH\"", node_dir_name);
-            let file = fs::File::open(&config_file)?;
-            let reader = std::io::BufReader::new(file);
-            let already_configured = reader
-                .lines()
-                .any(|line| line.map(|l| l.contains(&env_set_str)).unwrap_or(false));
-
-            // Append PATH only if not already configured
-            if !already_configured {
-                trace!("Adding PATH to shell config");
-                let mut file = OpenOptions::new().append(true).open(&config_file)?;
-
-                writeln!(file, "\n# Added by MCPHub-Desktop")?;
-                writeln!(file, "{}", env_set_str)?;
-            } else {
-                trace!("PATH already configured, skipping");
-            }
-
-            trace!("fix links");
-            let bin_dir = format!("{home_dir_str}/.node/{node_dir_name}/bin");
-            let npm_modules_dir =
-                format!("{home_dir_str}/.node/{node_dir_name}/lib/node_modules/npm/bin");
-
-            // Remove existing symlinks if they exist
-            let npm_path = format!("{bin_dir}/npm");
-            let npx_path = format!("{bin_dir}/npx");
-            if fs::metadata(&npm_path).is_ok() {
-                fs::remove_file(&npm_path)?;
-            }
-            if fs::metadata(&npx_path).is_ok() {
-                fs::remove_file(&npx_path)?;
-            }
-
-            // Create new symlinks
-            std::os::unix::fs::symlink(format!("{npm_modules_dir}/npm-cli.js"), &npm_path)?;
-            std::os::unix::fs::symlink(format!("{npm_modules_dir}/npx-cli.js"), &npx_path)?;
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            // Update system PATH for Windows
-            let node_bin_path = format!("{}\\{}\\", node_dir, node_dir_name);
-            let powershell_command = format!(
-                "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';{}', 'User')",
-                node_bin_path.replace("\\", "\\\\")
-            );
-
-            cmd!(shell, "powershell -Command {powershell_command}").run()?;
-
-            // Create npm.cmd and npx.cmd if they don't exist
-            let bin_dir = format!("{}\\{}\\", node_dir, node_dir_name);
-            let npm_modules_dir = format!("{}\\node_modules\\npm\\bin", bin_dir);
-
-            let npm_cmd_content = format!(
-                "@ECHO off\r\nNODE_EXE=\"{}node.exe\"\r\nNPM_CLI_JS=\"{}\\npm-cli.js\"\r\n\"%NODE_EXE%\" \"%NPM_CLI_JS%\" %*",
-                bin_dir, npm_modules_dir
-            );
-            let npx_cmd_content = format!(
-                "@ECHO off\r\nNODE_EXE=\"{}node.exe\"\r\nNPX_CLI_JS=\"{}\\npx-cli.js\"\r\n\"%NODE_EXE%\" \"%NPX_CLI_JS%\" %*",
-                bin_dir, npm_modules_dir
-            );
-
-            fs::write(format!("{}\\npm.cmd", bin_dir), npm_cmd_content)?;
-            fs::write(format!("{}\\npx.cmd", bin_dir), npx_cmd_content)?;
-        }
-
+        store.set("node_path", node_dir);
+        store.set("use_system_node", false);
         trace!("All done");
         Ok(())
     }
 }
 
-
 impl UVHandler {
-    fn get_home() -> Result<PathBuf> {
-        let current_home = home::home_dir().context("Failed to get home directory");
-        if let Ok(home_path) = &current_home {
-            trace!("Home directory: {}", home_path.to_string_lossy());
-        }
-        current_home
-    }
-
-    fn detect_shell() -> Result<String> {
-        #[cfg(target_os = "macos")]
-        {
-            let shell =
-                std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
-            let shell_name = std::path::Path::new(&shell)
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(|s| s.to_string())
-                .ok_or_else(|| anyhow!("Invalid shell path"))?;
-            trace!("Detected shell: {}", shell_name);
-            Ok(shell_name)
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            Ok("powershell".to_string())
-        }
-    }
-
-    pub fn detect() -> Result<bool> {
+    pub fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
+        let store = appHandle.store(APP_STATE_FILENAME).unwrap();
         let shell = Shell::new()?;
-        let shell_name = Self::detect_shell()?;
+        let shell_name = detect_shell()?;
+
+        let uv_path = store.get("uv_path").and_then(|s| s.as_str().map(String::from)).unwrap_or("".to_owned());
+
+        if (!uv_path.is_empty()) {
+            if let Ok(metadata) = fs::metadata(&uv_path) {
+                if metadata.is_dir() || metadata.is_symlink() {
+                    debug!("UV path exists: {}", uv_path);
+                    return Ok(true);
+                }
+            }
+            debug!("UV path does not exist: {}", uv_path);
+        }
 
         debug!("Running check node command");
 
@@ -289,36 +179,19 @@ impl UVHandler {
         let cmd_output = cmd!(shell, "{shell_name} -ic 'which uv'").read()?;
 
         #[cfg(target_os = "windows")]
-        let cmd_output = match cmd!(
-            shell,
-            "where.exe uv"
-        )
-        .output()
-        {
-            Ok(output) => {
-                if !output.stderr.is_empty() {
-                    error!(
-                        "Command stderr: {}",
-                        String::from_utf8_lossy(&output.stderr)
-                    );
-                }
-                String::from_utf8_lossy(&output.stdout).to_string()
-            }
-            Err(e) => {
-                error!("Failed to execute 'which.exe uv': {}", e);
-                return Ok(false);
-            }
-        };
-
+        let cmd_output = cmd!(shell, "where.exe uv").quiet().read()?;
         debug!("uv command output: {}", cmd_output);
-        let found = cmd_output.contains("uv");
 
-        Ok(found)
+        store.set("uv_path", cmd_output);
+        store.set("use_system_uv", true);
+
+        Ok(true)
     }
 
-    pub async fn install() -> Result<()> {
+    pub async fn install(appHandle: &tauri::AppHandle) -> Result<()> {
         trace!("Installing UV");
-        let home_dir_str = Self::get_home()?.to_string_lossy().to_string();
+        let store = appHandle.store(APP_STATE_FILENAME)?;
+        let home_dir_str = get_home()?.to_string_lossy().to_string();
 
         #[cfg(target_os = "macos")]
         let (uv_version, uv_arch, uv_dir_name, uv_download_url) = {
@@ -385,62 +258,8 @@ impl UVHandler {
             debug!("Extracted archive to {}", uv_dir);
         }
 
-        trace!("Configuring uv");
-        let home_dir = Self::get_home()?;
-
-        #[cfg(target_os = "macos")]
-        {
-            let system_shell = Self::detect_shell()?;
-            trace!("System shell: {}", system_shell);
-
-            let config_file = match system_shell.as_str() {
-                "bash" => home_dir.join(".bash_profile"),
-                "zsh" => home_dir.join(".zshrc"),
-                "fish" => home_dir.join(".config/fish/config.fish"),
-                _ => return Err(anyhow!("Unsupported shell type")),
-            };
-
-            trace!("Config file path: {}", config_file.display());
-
-            // Create config file if it doesn't exist
-            if !config_file.exists() {
-                if let Some(parent) = config_file.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::File::create(&config_file)?;
-            }
-
-            // Check if PATH is already configured
-            let env_set_str = format!("export PATH=\"$HOME/.uv/{}/:$PATH\"", uv_dir_name);
-            debug!("env_set_str: {}", env_set_str);
-            let file = fs::File::open(&config_file)?;
-            let reader = std::io::BufReader::new(file);
-            let already_configured = reader
-                .lines()
-                .any(|line| line.map(|l| l.contains(&env_set_str)).unwrap_or(false));
-
-            // Append PATH only if not already configured
-            if !already_configured {
-                trace!("Adding PATH to shell config");
-                let mut file = OpenOptions::new().append(true).open(&config_file)?;
-
-                writeln!(file, "\n# Added by MCPHub-Desktop")?;
-                writeln!(file, "{}", env_set_str)?;
-            } else {
-                trace!("PATH already configured, skipping");
-            }
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            // Update system PATH for Windows
-            let powershell_command = format!(
-                "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';{}', 'User')",
-                uv_dir.replace("\\", "\\\\")
-            );
-            let shell = Shell::new()?;
-            cmd!(shell, "powershell -Command {powershell_command}").run()?;
-        }
+        store.set("uv_path", uv_dir);
+        store.set("use_system_uv", false);
         trace!("All done");
         Ok(())
     }

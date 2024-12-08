@@ -1,41 +1,29 @@
-use log::{error, trace};
+use serde::{Deserialize, Serialize};
+use tauri_plugin_store::StoreExt;
 
 use super::core::{NpmHandler, UVHandler};
 
-#[tauri::command]
-pub async fn check_npm() -> bool {
-    match NpmHandler::detect() {
-        Ok(result) => {
-            trace!("check npm result: {}", result);
-            result
-        }
-        Err(e) => {
-            error!("Failed to detect npm: {}", e);
-            false
-        }
-    }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DependencyStatus {
+    uv: bool,
+    node: bool,
 }
 
 #[tauri::command]
-pub async fn install_npm() -> Result<(), String> {
-    NpmHandler::install().await.map_err(|e| e.to_string())
+pub async fn check_dependency(app_handle: tauri::AppHandle) -> DependencyStatus {
+    let status = DependencyStatus {
+        uv: UVHandler::detect(&app_handle).unwrap_or(false),
+        node: NpmHandler::detect(&app_handle).unwrap_or(false),
+    };
+    status
 }
 
 #[tauri::command]
-pub async fn check_uv() -> bool {
-    match UVHandler::detect() {
-        Ok(result) => {
-            trace!("check uv result: {}", result);
-            result
-        }
-        Err(e) => {
-            error!("Failed to detect uv: {}", e);
-            false
-        }
-    }
+pub async fn install_npm(app_handle: tauri::AppHandle) -> Result<(), String> {
+    NpmHandler::install(&app_handle).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn install_uv() -> Result<(), String> {
-    UVHandler::install().await.map_err(|e| e.to_string())
+pub async fn install_uv(app_handle: tauri::AppHandle) -> Result<(), String> {
+    UVHandler::install(&app_handle).await.map_err(|e| e.to_string())
 }
