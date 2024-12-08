@@ -1,7 +1,7 @@
+use crate::APP_STATE_FILENAME;
 use anyhow::{anyhow, Context, Result};
 #[cfg(target_os = "macos")]
 use flate2::read::GzDecoder;
-use home;
 use log::{debug, error, trace};
 use reqwest;
 use std::fs::{self, OpenOptions};
@@ -10,42 +10,18 @@ use std::io::{Cursor, Read};
 use std::path::PathBuf;
 #[cfg(target_os = "macos")]
 use tar::Archive;
+use tauri_plugin_store::StoreExt;
 use xshell::{cmd, Shell};
 #[cfg(target_os = "windows")]
 use zip::ZipArchive;
-use tauri_plugin_store::StoreExt;
-use crate::APP_STATE_FILENAME;
+
+use crate::utils::os::{detect_shell, get_home};
 
 pub struct NpmHandler;
 pub struct UVHandler;
 
-fn get_home() -> Result<PathBuf> {
-    let current_home = home::home_dir().context("Failed to get home directory");
-    if let Ok(home_path) = &current_home {
-        trace!("Home directory: {}", home_path.to_string_lossy());
-    }
-    current_home
-}
-
-fn detect_shell() -> Result<String> {
-    #[cfg(target_os = "macos")]
-    {
-        let shell =
-            std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
-        let shell_name = std::path::Path::new(&shell)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .map(|s| s.to_string())
-            .ok_or_else(|| anyhow!("Invalid shell path"))?;
-        trace!("Detected shell: {}", shell_name);
-        Ok(shell_name)
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        Ok("powershell".to_string())
-    }
-}
+pub struct ResourceHandler;
+const SERVERS_URL: &str = "https://www.mcphub.net/server-configuration/servers.json";
 
 impl NpmHandler {
     pub fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
@@ -53,7 +29,10 @@ impl NpmHandler {
         let shell = Shell::new()?;
         let shell_name = detect_shell()?;
 
-        let node_path = store.get("node_path").and_then(|s| s.as_str().map(String::from)).unwrap_or("".to_owned());
+        let node_path = store
+            .get("node_path")
+            .and_then(|s| s.as_str().map(String::from))
+            .unwrap_or("".to_owned());
         if (!node_path.is_empty()) {
             if let Ok(metadata) = fs::metadata(&node_path) {
                 if metadata.is_dir() || metadata.is_symlink() {
@@ -66,7 +45,9 @@ impl NpmHandler {
         debug!("Running check node command");
 
         #[cfg(target_os = "macos")]
-        let cmd_output = cmd!(shell, "{shell_name} -ic 'which node'").quiet().read()?;
+        let cmd_output = cmd!(shell, "{shell_name} -ic 'which node'")
+            .quiet()
+            .read()?;
 
         #[cfg(target_os = "windows")]
         let cmd_output = cmd!(shell, "where.exe node").quiet().read()?;
@@ -161,7 +142,10 @@ impl UVHandler {
         let shell = Shell::new()?;
         let shell_name = detect_shell()?;
 
-        let uv_path = store.get("uv_path").and_then(|s| s.as_str().map(String::from)).unwrap_or("".to_owned());
+        let uv_path = store
+            .get("uv_path")
+            .and_then(|s| s.as_str().map(String::from))
+            .unwrap_or("".to_owned());
 
         if (!uv_path.is_empty()) {
             if let Ok(metadata) = fs::metadata(&uv_path) {
@@ -263,4 +247,28 @@ impl UVHandler {
         trace!("All done");
         Ok(())
     }
+}
+
+impl ResourceHandler {
+
+    async fn download(appHandle: &tauri::AppHandle) -> Result<()> {
+        let store = appHandle.store(APP_STATE_FILENAME)?;
+        let servers_json = reqwest::get(SERVERS_URL)
+            .await?
+            .text()
+            .await?;
+        debug!("servers.json: {}", servers_json);
+        store.set("servers", servers_json);
+        debug!("servers.json set in store");
+        Ok(())
+    }
+    pub async fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
+        let store = appHandle.store(APP_STATE_FILENAME)?;
+        if store.get("servers").is_some() {
+            return Ok(true);
+        }
+        Self::download(appHandle).await?;
+        Ok(true)
+    }
+
 }
