@@ -12,21 +12,23 @@ export default function WelcomePage() {
   const [npmIsInstalling, setNpmIsInstalling] = useState(false);
   const [uvInstalled, setUvInstalled] = useState(false);
   const [uvIsInstalling, setUvIsInstalling] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const [resourceLoaded, setResourceLoaded] = useState(false);
 
   const checkDependencies = async () => {
+    setIsChecking(true);
     try {
-      setIsChecking(true);
       const status = await invoke<DependencyStatus>("check_dependency");
       setNpmInstalled(status.node);
       setUvInstalled(status.uv);
+      setResourceLoaded(await invoke("check_resource"));
     } finally {
       setIsChecking(false);
     }
   };
 
   const checkResource = async () => {
+    setIsChecking(true);
     try {
       setResourceLoaded(await invoke("check_resource"));
     } finally {
@@ -55,8 +57,6 @@ export default function WelcomePage() {
 
   useEffect(() => {
     checkDependencies();
-    checkResource();
-    // Set up periodic check every 10 seconds
     const intervalId = setInterval(() => {
       checkDependencies();
     }, 10000);
@@ -77,84 +77,84 @@ export default function WelcomePage() {
 
       <div className="flex flex-col md:flex-row w-full gap-4 px-4">
         <div className="flex-1 text-center p-4 bg-gray-50 rounded-lg">
-          <h2 className="text-xl font-semibold mb-2">Node.js Status</h2>
+          <h2 className="text-xl font-semibold mb-2">Node.js</h2>
           <div className="flex items-center justify-center gap-3">
             {isChecking ? (
               <div className="animate-spin h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
             ) : (
-              <span className={`inline-block w-3 h-3 rounded-full ${npmInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            )}
-            <span className="text-gray-700">
-              {npmInstalled ? 'Installed' : 'Not installed'}
-            </span>
-            {!npmInstalled && !npmIsInstalling && !isChecking && (
-              <button
-                onClick={installNpm}
-                className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Install Node.js
-              </button>
-            )}
-            {npmIsInstalling && (
-              <div className="ml-4 flex items-center gap-2">
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                <span className="text-blue-500">Installing...</span>
-              </div>
+              <>
+                <span className={`inline-block w-3 h-3 rounded-full ${npmInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className="text-gray-700">
+                  {npmInstalled ? '' : 'Missing'}
+                </span>
+                {!npmInstalled && !npmIsInstalling && (
+                  <button
+                    onClick={installNpm}
+                    className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Install Node.js
+                  </button>
+                )}
+                {npmIsInstalling && (
+                  <div className="ml-4 flex items-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                    <span className="text-blue-500">Installing...</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         <div className="flex-1 text-center p-4 bg-gray-50 rounded-lg">
-          <h2 className="text-xl font-semibold mb-2">UV Status</h2>
+          <h2 className="text-xl font-semibold mb-2">UV</h2>
           <div className="flex items-center justify-center gap-3">
             {isChecking ? (
               <div className="animate-spin h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
             ) : (
-              <span className={`inline-block w-3 h-3 rounded-full ${uvInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            )}
-            <span className="text-gray-700">
-              {uvInstalled ? 'Installed' : 'Not installed'}
-            </span>
-            {!uvInstalled && !uvIsInstalling && !isChecking && (
-              <button
-                onClick={installUv}
-                className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Install UV
-              </button>
-            )}
-            {uvIsInstalling && (
-              <div className="ml-4 flex items-center gap-2">
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                <span className="text-blue-500">Installing...</span>
-              </div>
+              <>
+                <span className={`inline-block w-3 h-3 rounded-full ${uvInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className="text-gray-700">
+                  {uvInstalled ? '' : 'Missing'}
+                </span>
+                {!uvInstalled && !uvIsInstalling && (
+                  <button
+                    onClick={installUv}
+                    className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Install UV
+                  </button>
+                )}
+                {uvIsInstalling && (
+                  <div className="ml-4 flex items-center gap-2">
+                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                    <span className="text-blue-500">Installing...</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
         <div className="flex-1 text-center p-4 bg-gray-50 rounded-lg">
-          <h2 className="text-xl font-semibold mb-2">Resource Status</h2>
+          <h2 className="text-xl font-semibold mb-2">Servers</h2>
           <div className="flex items-center justify-center gap-3">
             {isChecking ? (
               <div className="animate-spin h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
             ) : (
-              <span className={`inline-block w-3 h-3 rounded-full ${resourceLoaded ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            )}
-            <span className="text-gray-700">
-              {resourceLoaded ? 'Loaded' : 'Not loaded'}
-            </span>
-            {!resourceLoaded && !isChecking && (
-              <button
-                onClick={checkResource}
-                className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Check Resource
-              </button>
-            )}
-            {isChecking && (
-              <div className="ml-4 flex items-center gap-2">
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                <span className="text-blue-500">Checking...</span>
-              </div>
+              <>
+                <span className={`inline-block w-3 h-3 rounded-full ${resourceLoaded ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className="text-gray-700">
+                  {resourceLoaded ? '' : 'Missing'}
+                </span>
+                {!resourceLoaded && (
+                  <button
+                    onClick={checkResource}
+                    className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Check Servers
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

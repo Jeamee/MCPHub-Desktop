@@ -33,6 +33,8 @@ pub fn run() {
             dependency_view::install_uv,
             servers_view::get_servers,
             servers_view::get_installed_servers,
+            servers_view::install_server,
+            servers_view::uninstall_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

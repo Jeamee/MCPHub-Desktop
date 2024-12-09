@@ -21,11 +21,11 @@ pub struct NpmHandler;
 pub struct UVHandler;
 
 pub struct ResourceHandler;
-const SERVERS_URL: &str = "https://www.mcphub.net/server-configuration/servers.json";
+const SERVERS_URL: &str = "https://app.mcphub.net/server-configuration/servers.json";
 
 impl NpmHandler {
-    pub fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
-        let store = appHandle.store(APP_STATE_FILENAME).unwrap();
+    pub fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
+        let store = app_handle.store(APP_STATE_FILENAME).unwrap();
         let shell = Shell::new()?;
         let shell_name = detect_shell()?;
 
@@ -59,9 +59,9 @@ impl NpmHandler {
         Ok(true)
     }
 
-    pub async fn install(appHandle: &tauri::AppHandle) -> Result<()> {
+    pub async fn install(app_handle: &tauri::AppHandle) -> Result<()> {
         trace!("Installing Node.js");
-        let store = appHandle.store(APP_STATE_FILENAME)?;
+        let store = app_handle.store(APP_STATE_FILENAME)?;
         let shell = Shell::new()?;
         let home_dir_str = get_home()?.to_string_lossy().to_string();
 
@@ -137,8 +137,8 @@ impl NpmHandler {
 }
 
 impl UVHandler {
-    pub fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
-        let store = appHandle.store(APP_STATE_FILENAME).unwrap();
+    pub fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
+        let store = app_handle.store(APP_STATE_FILENAME).unwrap();
         let shell = Shell::new()?;
         let shell_name = detect_shell()?;
 
@@ -172,9 +172,9 @@ impl UVHandler {
         Ok(true)
     }
 
-    pub async fn install(appHandle: &tauri::AppHandle) -> Result<()> {
+    pub async fn install(app_handle: &tauri::AppHandle) -> Result<()> {
         trace!("Installing UV");
-        let store = appHandle.store(APP_STATE_FILENAME)?;
+        let store = app_handle.store(APP_STATE_FILENAME)?;
         let home_dir_str = get_home()?.to_string_lossy().to_string();
 
         #[cfg(target_os = "macos")]
@@ -251,8 +251,8 @@ impl UVHandler {
 
 impl ResourceHandler {
 
-    async fn download(appHandle: &tauri::AppHandle) -> Result<()> {
-        let store = appHandle.store(APP_STATE_FILENAME)?;
+    async fn download(app_handle: &tauri::AppHandle) -> Result<()> {
+        let store = app_handle.store(APP_STATE_FILENAME)?;
         let servers_json = reqwest::get(SERVERS_URL)
             .await?
             .text()
@@ -262,12 +262,12 @@ impl ResourceHandler {
         debug!("servers.json set in store");
         Ok(())
     }
-    pub async fn detect(appHandle: &tauri::AppHandle) -> Result<bool> {
-        let store = appHandle.store(APP_STATE_FILENAME)?;
+    pub async fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
+        let store = app_handle.store(APP_STATE_FILENAME)?;
         if store.get("servers").is_some() {
             return Ok(true);
         }
-        Self::download(appHandle).await?;
+        Self::download(app_handle).await?;
         Ok(true)
     }
 

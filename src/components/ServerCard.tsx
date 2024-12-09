@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { InstallStatus, ServerCardData } from '@/types/server'
 import { getRelativeTime } from '@/utils/getRelativeTime'
+import { invoke } from "@tauri-apps/api/core"
 import { motion } from 'framer-motion'
 import { Check, Download, Loader2, Star } from 'lucide-react'
 import { useState } from 'react'
@@ -11,6 +12,7 @@ import { useState } from 'react'
 type ServerCardProps = ServerCardData
 
 export function ServerCard({
+    id,
     title,
     description,
     creator,
@@ -24,12 +26,15 @@ export function ServerCard({
     const [installStatus, setInstallStatus] = useState<InstallStatus>(isInstalled ? 'installed' : 'install')
     const relativeTime = getRelativeTime(publishDate)
 
-    const handleInstall = () => {
+    const handleInstall = async () => {
         if (installStatus === 'install') {
             setInstallStatus('installing')
-            setTimeout(() => setInstallStatus('installed'), 2000) // Simulate installation
+            await invoke('install_server', { serverId: id })
+            setInstallStatus('installed')
         } else if (installStatus === 'installed') {
+            await invoke('uninstall_server', { serverId: id })
             setInstallStatus('install') // Uninstall
+
         }
     }
 
