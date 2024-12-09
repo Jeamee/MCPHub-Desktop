@@ -1,0 +1,38 @@
+FROM rust:latest
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    gcc-mingw-w64-x86-64 \
+    g++-mingw-w64-x86-64 \
+    wine64 \
+    pkg-config \
+    libssl-dev \
+    nsis \
+    wget \
+    ca-certificates \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Windows target
+RUN rustup target add x86_64-pc-windows-gnu
+RUN rustup toolchain install stable-x86_64-pc-windows-gnu
+
+# Install Tauri CLI
+RUN cargo install tauri-cli
+
+# Download WebView2 SDK
+RUN wget -O webview2.zip https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2 && \
+    unzip webview2.zip -d /webview2 && \
+    mkdir -p /usr/x86_64-w64-mingw32/lib/ && \
+    cp /webview2/build/native/x64/WebView2Loader.dll /usr/x86_64-w64-mingw32/lib/
+
+# Create NSIS plugins directory and download the required DLL
+RUN mkdir -p /usr/share/nsis/Plugins/x86-unicode && \
+    wget -O /usr/share/nsis/Plugins/x86-unicode/nsis_tauri_utils.dll \
+    https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.4.1/nsis_tauri_utils.dll
+
+# Set the working directory
+WORKDIR /app
+
+# Set the default command
+CMD ["cargo", "tauri", "build", "--target", "x86_64-pc-windows-gnu"]
