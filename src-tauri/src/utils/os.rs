@@ -14,8 +14,7 @@ pub fn get_home() -> Result<PathBuf> {
 pub fn detect_shell() -> Result<String> {
     #[cfg(target_os = "macos")]
     {
-        let shell =
-            std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
+        let shell = std::env::var("SHELL").context("Failed to get SHELL environment variable")?;
         let shell_name = std::path::Path::new(&shell)
             .file_name()
             .and_then(|name| name.to_str())

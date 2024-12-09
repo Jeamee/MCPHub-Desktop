@@ -250,13 +250,9 @@ impl UVHandler {
 }
 
 impl ResourceHandler {
-
     async fn download(app_handle: &tauri::AppHandle) -> Result<()> {
         let store = app_handle.store(APP_STATE_FILENAME)?;
-        let servers_json = reqwest::get(SERVERS_URL)
-            .await?
-            .text()
-            .await?;
+        let servers_json = reqwest::get(SERVERS_URL).await?.text().await?;
         debug!("servers.json: {}", servers_json);
         store.set("servers", servers_json);
         debug!("servers.json set in store");
@@ -270,5 +266,4 @@ impl ResourceHandler {
         Self::download(app_handle).await?;
         Ok(true)
     }
-
 }
