@@ -14,14 +14,12 @@ use api::servers::view as servers_view;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .targets([
                     Target::new(TargetKind::Stdout),
                     Target::new(TargetKind::LogDir { file_name: None }),
-                    Target::new(TargetKind::Webview),
                 ])
                 .build(),
         )
@@ -35,6 +33,7 @@ pub fn run() {
             servers_view::get_installed_servers,
             servers_view::install_server,
             servers_view::uninstall_server,
+            servers_view::update_server,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

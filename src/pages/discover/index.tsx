@@ -15,6 +15,7 @@ export default function DiscoverPage() {
         publishDate: parseDate(card.publishDate),
       }));
       setServerCards(processedCards);
+      console.log("processedCards", processedCards);
     };
 
     fetchServers();

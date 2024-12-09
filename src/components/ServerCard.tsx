@@ -6,8 +6,9 @@ import { InstallStatus, ServerCardData } from '@/types/server'
 import { getRelativeTime } from '@/utils/getRelativeTime'
 import { invoke } from "@tauri-apps/api/core"
 import { motion } from 'framer-motion'
-import { Check, Download, Loader2, Star } from 'lucide-react'
+import { Check, Download, Loader2, Settings, Star } from 'lucide-react'
 import { useState } from 'react'
+import { ConfigModal } from "./ConfigModal"
 
 type ServerCardProps = ServerCardData
 
@@ -20,11 +21,21 @@ export function ServerCard({
     publishDate,
     rating,
     tags,
-    isInstalled
+    isInstalled,
+    env,
+    guide
 }: ServerCardProps) {
     const [isHovered, setIsHovered] = useState(false)
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
     const [installStatus, setInstallStatus] = useState<InstallStatus>(isInstalled ? 'installed' : 'install')
     const relativeTime = getRelativeTime(publishDate)
+
+    const handleConfigSave = async (config: Record<string, string>) => {
+        console.log('Saved config:', config)
+        setInstallStatus('installing')
+        await invoke('update_server', { serverId: id, env: config })
+        setInstallStatus('installed')
+    }
 
     const handleInstall = async () => {
         if (installStatus === 'install') {
@@ -33,7 +44,7 @@ export function ServerCard({
             setInstallStatus('installed')
         } else if (installStatus === 'installed') {
             await invoke('uninstall_server', { serverId: id })
-            setInstallStatus('install') // Uninstall
+            setInstallStatus('install')
 
         }
     }
@@ -89,6 +100,16 @@ export function ServerCard({
                             <h3 className="font-semibold text-base leading-none mb-1">{title}</h3>
                             <p className="text-sm text-muted-foreground">{creator}</p>
                         </div>
+                        {installStatus === 'installed' && Object.keys(env).length > 0 && (
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setIsConfigModalOpen(true)}
+                                className="ml-auto"
+                            >
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">{description}</p>
                     <div className="flex flex-wrap mb-3">
@@ -126,6 +147,13 @@ export function ServerCard({
                     </Button>
                 </CardContent>
             </Card>
+            <ConfigModal
+                isOpen={isConfigModalOpen}
+                onClose={() => setIsConfigModalOpen(false)}
+                env={env}
+                guide={guide}
+                onSave={handleConfigSave}
+            />
         </motion.div>
     )
 }

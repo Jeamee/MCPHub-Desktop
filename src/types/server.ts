@@ -6,7 +6,9 @@ interface BaseServerCardData {
   logoUrl: string
   rating: number
   tags: string[]
-  isInstalled: boolean
+  isInstalled: boolean,
+  env: Record<string, string>
+  guide: string
 }
 
 export interface ServerCardData extends BaseServerCardData {

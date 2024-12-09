@@ -1,4 +1,5 @@
-use super::core::{FrontendServer, load_all_frontend_servers, load_all_installed_frontend_servers, install_server_function, uninstall_server_function};
+use super::core::{FrontendServer, load_all_frontend_servers, load_all_installed_frontend_servers, install_server_function, uninstall_server_function, update_server_function};
+use std::collections::HashMap;
 use tauri_plugin_store::StoreExt;
 
 
@@ -14,7 +15,12 @@ pub async fn get_installed_servers(app_handle: tauri::AppHandle) -> Result<Vec<F
 
 #[tauri::command]
 pub async fn install_server(app_handle: tauri::AppHandle, server_id: &str) -> Result<bool, String> {
-    Ok(install_server_function(&app_handle, server_id))
+    Ok(install_server_function(&app_handle, server_id, None))
+}
+
+#[tauri::command]
+pub async fn update_server(app_handle: tauri::AppHandle, server_id: &str, env: Option<HashMap<String, String>>) -> Result<bool, String> {
+    Ok(update_server_function(&app_handle, server_id, env.unwrap_or_default()))
 }
 
 #[tauri::command]
