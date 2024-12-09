@@ -2,8 +2,8 @@ name: "publish"
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v*' # This will match any tag that starts with 'v', like v1.0.0
 
 # This is the example from the readme.
 # On each push to the `release` branch it will create or update a GitHub release, build your app, and upload the artifacts to the release.
@@ -28,6 +28,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Important for tags to work correctly
 
       - name: setup node
         uses: actions/setup-node@v4
@@ -49,7 +51,7 @@ jobs:
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
       - name: install frontend dependencies
-        run: yarn install # change this to npm, pnpm or bun depending on which one you use.
+        run: pnpm install # change this to npm, pnpm or bun depending on which one you use.
 
       - uses: tauri-apps/tauri-action@v0
         env:
