@@ -5,8 +5,8 @@
   "identifier": "com.mcphub-desktop.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "",
     "frontendDist": "../dist"
   },
   "app": {
