@@ -43,7 +43,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgzQzI2NUMyQjY3OTgzM0MKUldROGczbTJ3bVhDZ3hIYlV4OGZUb0EzeFZCUHBJR3RKSll6QlltckNQSjFhWEVRcUFRK3pnMnoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzNjg3Q0Q1NzYxNDNBRkEKUldUNk9oUjIxWHhvczdLdkpXTHRzTFI3Ky9HVHB0UTV3VWJZb254Y1QxREhrQUVjeGh4Z1B2Ni8K",
       "endpoints": [
         "https://github.com/Jeamee/MCPHub-Desktop/releases/latest/download/latest.json"
       ],
