@@ -172,28 +172,28 @@ impl UVHandler {
             {
                 #[cfg(target_arch = "aarch64")]
                 {
-                    "aarch64-apple-darwin"
+                    "aarch64-apple-darwin.tar.gz"
                 }
                 #[cfg(target_arch = "x86_64")]
                 {
-                    "x86_64_apple-darwin"
+                    "x86_64-apple-darwin.tar.gz"
                 }
             }
             #[cfg(target_os = "windows")]
             {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    "x86_64"
+                    "uv-x86_64-pc-windows-msvc.zip"
                 }
                 #[cfg(target_arch = "x86")]
                 {
-                    "i686"
+                    "i686-pc-windows-msvc.zip"
                 }
             }
         };
 
         let uv_download_url = format!(
-            "https://github.com/astral-sh/uv/releases/download/{}/uv-{}.tar.gz",
+            "https://github.com/astral-sh/uv/releases/download/{}/uv-{}",
             uv_version, uv_arch
         );
 
