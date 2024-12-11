@@ -38,21 +38,19 @@ export function ServerCard({
     }
 
     const handleInstall = async () => {
+        if (installStatus === 'installed') {
+            await invoke('uninstall_server', { serverId: id });
+            setInstallStatus('install');
+            return;
+        }
+
         if (Object.keys(env).length === 0) {
-            setIsConfigModalOpen(false);
-            if (installStatus === 'install') {
-                setInstallStatus('installing');
-                await invoke('install_server', { serverId: id });
-                setInstallStatus('installed');
-            } else if (installStatus === 'installed') {
-                await invoke('uninstall_server', { serverId: id });
-                setInstallStatus('install');
-            }
+            setInstallStatus('installing');
+            await invoke('install_server', { serverId: id });
+            setInstallStatus('installed');
         } else {
-            if (installStatus === 'install') {
-                setIsConfigModalOpen(true);
-            };
-        };
+            setIsConfigModalOpen(true);
+        }
     }
 
     const getButtonContent = () => {
