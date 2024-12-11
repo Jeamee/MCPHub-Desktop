@@ -68,18 +68,18 @@ pub struct ClientConfig {
 impl ClientConfig {
     fn config_path() -> std::path::PathBuf {
         #[cfg(target_os = "macos")]
-        let config_path = get_home()
+        {
+        get_home()
             .unwrap()
-            .join("Library/Application Support/Claude/claude_desktop_config.json");
+            .join("Library/Application Support/Claude/claude_desktop_config.json")
+        }
         #[cfg(target_os = "windows")]
         {
         let appdata = std::env::var("APPDATA").unwrap();
-        let config_path = std::path::PathBuf::from(appdata)
+        std::path::PathBuf::from(appdata)
             .join("Claude")
-            .join("claude_desktop_config.json");
+            .join("claude_desktop_config.json")
         }
-
-        config_path
     }
 
     fn load() -> Self {
