@@ -88,9 +88,6 @@ export default function WelcomePage() {
             ) : (
               <>
                 <span className={`inline-block w-3 h-3 rounded-full ${npmInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-gray-700">
-                  {npmInstalled ? '' : 'Missing'}
-                </span>
                 {!npmInstalled && !npmIsInstalling && (
                   <button
                     onClick={installNpm}
@@ -118,9 +115,6 @@ export default function WelcomePage() {
             ) : (
               <>
                 <span className={`inline-block w-3 h-3 rounded-full ${uvInstalled ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-gray-700">
-                  {uvInstalled ? '' : 'Missing'}
-                </span>
                 {!uvInstalled && !uvIsInstalling && (
                   <button
                     onClick={installUv}
@@ -147,15 +141,12 @@ export default function WelcomePage() {
             ) : (
               <>
                 <span className={`inline-block w-3 h-3 rounded-full ${resourceLoaded ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-gray-700">
-                  {resourceLoaded ? '' : 'Missing'}
-                </span>
                 {!resourceLoaded && (
                   <button
                     onClick={checkResource}
                     className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    Check Servers
+                    Install
                   </button>
                 )}
               </>

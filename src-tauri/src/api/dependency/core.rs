@@ -66,28 +66,32 @@ impl NpmHandler {
             {
                 #[cfg(target_arch = "aarch64")]
                 {
-                    "darwin-arm64"
+                    "darwin-arm64.tar.gz"
                 }
                 #[cfg(target_arch = "x86_64")]
                 {
-                    "darwin-x64"
+                    "darwin-x64.tar.gz"
                 }
             }
             #[cfg(target_os = "windows")]
             {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    "win-x64"
+                    "win-x64.zip"
                 }
                 #[cfg(target_arch = "x86")]
                 {
-                    "win-x86"
+                    "win-x86.zip"
+                }
+                #[cfg(target_arch = "aarch64")]
+                {
+                    "win-arm64.zip"
                 }
             }
         };
 
         let node_download_url = format!(
-            "https://nodejs.org/dist/{}/node-{}-{}.tar.gz",
+            "https://nodejs.org/dist/{}/node-{}-{}",
             node_version, node_version, node_arch
         );
         trace!("Downloading node from {}", node_download_url);
@@ -183,7 +187,7 @@ impl UVHandler {
             {
                 #[cfg(target_arch = "x86_64")]
                 {
-                    "uv-x86_64-pc-windows-msvc.zip"
+                    "x86_64-pc-windows-msvc.zip"
                 }
                 #[cfg(target_arch = "x86")]
                 {
