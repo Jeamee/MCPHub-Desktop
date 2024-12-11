@@ -1,5 +1,6 @@
 import logo from "@/assets/logo.svg";
 import { invoke } from "@tauri-apps/api/core";
+import { debug } from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";
 
 type DependencyStatus = {
@@ -21,7 +22,10 @@ export default function WelcomePage() {
       const status = await invoke<DependencyStatus>("check_dependency");
       setNpmInstalled(status.node);
       setUvInstalled(status.uv);
-      setResourceLoaded(await invoke("check_resource"));
+      debug("Start check_resource");
+      const resourceLoaded = await invoke<boolean>("check_resource");
+      debug("End check_resource");
+      setResourceLoaded(resourceLoaded);
     } finally {
       setIsChecking(false);
     }
@@ -92,7 +96,7 @@ export default function WelcomePage() {
                     onClick={installNpm}
                     className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    Install Node.js
+                    Install
                   </button>
                 )}
                 {npmIsInstalling && (
@@ -122,7 +126,7 @@ export default function WelcomePage() {
                     onClick={installUv}
                     className="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    Install UV
+                    Install
                   </button>
                 )}
                 {uvIsInstalling && (

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use log::debug;
 use tauri_plugin_store::StoreExt;
 
 use super::core::{NpmHandler, ResourceHandler, UVHandler};
@@ -7,13 +8,15 @@ use super::core::{NpmHandler, ResourceHandler, UVHandler};
 pub struct DependencyStatus {
     uv: bool,
     node: bool,
+    servers: bool,
 }
 
 #[tauri::command]
 pub async fn check_dependency(app_handle: tauri::AppHandle) -> DependencyStatus {
     let status = DependencyStatus {
-        uv: UVHandler::detect(&app_handle).unwrap_or(false),
-        node: NpmHandler::detect(&app_handle).unwrap_or(false),
+        uv: UVHandler::detect(&app_handle).await.unwrap_or(false),
+        node: NpmHandler::detect(&app_handle).await.unwrap_or(false),
+        servers: ResourceHandler::detect(&app_handle).await.unwrap_or(false),
     };
     status
 }
@@ -34,5 +37,6 @@ pub async fn install_uv(app_handle: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn check_resource(app_handle: tauri::AppHandle) -> bool {
+    debug!("Start check_resource in backend");
     ResourceHandler::detect(&app_handle).await.unwrap_or(false)
 }

@@ -1,8 +1,6 @@
 mod api;
 mod utils;
 
-use log::debug;
-use tauri::Wry;
 use tauri_plugin_log::{Target, TargetKind};
 use tauri_plugin_store::StoreExt;
 
@@ -19,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(
             tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
                 .targets([
                     Target::new(TargetKind::Stdout),
                     Target::new(TargetKind::LogDir { file_name: None }),

@@ -38,15 +38,21 @@ export function ServerCard({
     }
 
     const handleInstall = async () => {
-        if (installStatus === 'install') {
-            setInstallStatus('installing')
-            await invoke('install_server', { serverId: id })
-            setInstallStatus('installed')
-        } else if (installStatus === 'installed') {
-            await invoke('uninstall_server', { serverId: id })
-            setInstallStatus('install')
-
-        }
+        if (Object.keys(env).length === 0) {
+            setIsConfigModalOpen(false);
+            if (installStatus === 'install') {
+                setInstallStatus('installing');
+                await invoke('install_server', { serverId: id });
+                setInstallStatus('installed');
+            } else if (installStatus === 'installed') {
+                await invoke('uninstall_server', { serverId: id });
+                setInstallStatus('install');
+            }
+        } else {
+            if (installStatus === 'install') {
+                setIsConfigModalOpen(true);
+            };
+        };
     }
 
     const getButtonContent = () => {
@@ -93,8 +99,8 @@ export function ServerCard({
                 <CardContent className="p-4">
                     <div className="flex items-center space-x-3 mb-3">
                         <Avatar className="h-10 w-10">
-                            <AvatarImage src={logoUrl} alt={creator} />
-                            <AvatarFallback>{creator[0]}</AvatarFallback>
+                            <AvatarImage src={logoUrl} alt={title} />
+                            <AvatarFallback>{title[0]}</AvatarFallback>
                         </Avatar>
                         <div>
                             <h3 className="font-semibold text-base leading-none mb-1">{title}</h3>
