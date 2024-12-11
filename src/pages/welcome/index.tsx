@@ -62,12 +62,13 @@ export default function WelcomePage() {
   useEffect(() => {
     checkDependencies();
     const intervalId = setInterval(() => {
-      checkDependencies();
-    }, 10000);
+      if (!npmIsInstalling && !uvIsInstalling) {
+        checkDependencies();
+      }
+    }, 60000);
 
-    // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [npmIsInstalling, uvIsInstalling]);
 
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto p-8">
