@@ -18,11 +18,12 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https://github.com https://api.github.com https://raw.githubusercontent.com https://objects.githubusercontent.com https://registry.npmjs.org https://nodejs.org https://app.mcphub.net ; img-src 'self' https: data: asset: https://asset.localhost"
     }
   },
   "bundle": {
     "active": true,
+    "category": "DeveloperTool",
     "targets": "all",
     "windows": {
       "webviewInstallMode": {
@@ -32,6 +33,15 @@
         "language": "en-US"
       }
     },
+    "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "10.13",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": null,
+        "hardenedRuntime": true
+      },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
