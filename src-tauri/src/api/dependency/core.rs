@@ -31,7 +31,7 @@ impl NpmHandler {
             .unwrap_or("".to_owned());
         if !node_path.is_empty() {
             if let Ok(metadata) = fs::metadata(&node_path) {
-                if metadata.is_dir() || metadata.is_symlink() {
+                if metadata.is_dir() || metadata.is_symlink() || metadata.is_file() {
                     trace!("Node path exists: {}", node_path);
                     return Ok(true);
                 }
@@ -49,7 +49,7 @@ impl NpmHandler {
         let cmd_output = cmd!(shell, "where.exe node").quiet().read()?;
 
         trace!("Node command output: {}", cmd_output);
-        store.set("node_path", node_path);
+        store.set("node_path", cmd_output);
         store.set("use_system_node", true);
 
         Ok(true)
@@ -139,7 +139,7 @@ impl UVHandler {
 
         if !uv_path.is_empty() {
             if let Ok(metadata) = fs::metadata(&uv_path) {
-                if metadata.is_dir() || metadata.is_symlink() {
+                if metadata.is_dir() || metadata.is_symlink() || metadata.is_file() {
                     trace!("UV path exists: {}", uv_path);
                     return Ok(true);
                 }
