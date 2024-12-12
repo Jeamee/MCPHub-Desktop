@@ -229,7 +229,7 @@ impl UVHandler {
             archive.extract(&uv_dir)?;
         }
 
-        store.set("uv_path", uv_dir);
+        store.set("uv_path", format!("{}/uv-{}", uv_dir, uv_arch.split(".").next().unwrap()));
         store.set("use_system_uv", false);
         trace!("All done");
         Ok(())
@@ -248,11 +248,6 @@ impl ResourceHandler {
     }
 
     pub async fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
-        trace!("Start detect resource");
-        let store = app_handle.store(APP_STATE_FILENAME)?;
-        if store.get("servers").is_some() {
-            return Ok(true);
-        }
         trace!("Start download servers.json when resource not found");
         Self::download(app_handle).await?;
         trace!("End download servers.json when resource not found");

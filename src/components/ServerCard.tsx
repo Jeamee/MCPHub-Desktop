@@ -115,8 +115,8 @@ export function ServerCard({
                             </Button>
                         )}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">{description}</p>
-                    <div className="flex flex-wrap mb-3">
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-5">{description}</p>
+                    <div className="flex flex-wrap gap-1 mb-3 h-12 overflow-y-auto">
                         {tags.map((tag, index) => (
                             <Tag key={index} name={tag} />
                         ))}
