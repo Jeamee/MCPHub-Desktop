@@ -14,11 +14,11 @@ MCPHub Desktop is [Model Context Protocol](https://modelcontextprotocol.io/) (MC
 
 
 ## Roadmap
--[] Support [Continue](https://github.com/continuedev/continue)
--[] Support [FireBase Genkit](https://github.com/firebase/genkit)
--[] Support [Zed](https://zed.dev/)
--[] Support [Sourcegraph Cody](https://sourcegraph.com/cody)
--[] Support [GenAIScript](https://microsoft.github.io/genaiscript/reference/scripts/mcp-tools/)
+- [ ] Support [Continue](https://github.com/continuedev/continue)
+- [ ] Support [FireBase Genkit](https://github.com/firebase/genkit)
+- [ ] Support [Zed](https://zed.dev/)
+- [ ] Support [Sourcegraph Cody](https://sourcegraph.com/cody)
+- [ ] Support [GenAIScript](https://microsoft.github.io/genaiscript/reference/scripts/mcp-tools/)
 
 And welcome to provide feature suggestion by submit issues!
 
