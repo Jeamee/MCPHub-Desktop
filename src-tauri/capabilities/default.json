@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "log:default",
-    "store:default"
+    "store:default",
+    "shell:default"
   ]
 }
