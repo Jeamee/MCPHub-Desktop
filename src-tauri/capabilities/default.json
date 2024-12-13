@@ -9,6 +9,7 @@
     "core:default",
     "log:default",
     "store:default",
-    "shell:default"
+    "shell:default",
+    "updater:default"
   ]
 }
