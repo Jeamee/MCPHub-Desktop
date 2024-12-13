@@ -23,12 +23,12 @@ struct BaseServer {
 pub struct FrontendServer {
     #[serde(flatten)]
     base: BaseServer,
-    #[serde(default)]
-    guide: String,
     #[serde(rename = "isInstalled", default)]
     is_installed: bool,
     #[serde(default)]
     env: HashMap<String, String>,
+    #[serde(default)]
+    guide: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +38,8 @@ struct CommandInfo {
     args: Vec<String>,
     #[serde(default)]
     env: HashMap<String, String>,
+    #[serde(default)]
+    guide: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -135,18 +137,26 @@ pub async fn get_client_server_config() -> HashMap<String, HashMap<String, Strin
 }
 
 pub async fn load_all_frontend_servers(app_handle: &tauri::AppHandle) -> Vec<FrontendServer> {
-    let mut servers = get_servers_from_store::<FrontendServer>(app_handle);
+    let backend_servers = get_servers_from_store::<BackendServer>(app_handle);
     debug!("load_all_frontend_servers core: loaded servers");
     let id_env_map = get_client_server_config().await;
     debug!("load_all_frontend_servers core: loaded id_env_map");
-    servers.iter_mut().for_each(|server| {
-        if id_env_map.contains_key(&server.base.id) {
-            server.is_installed = true;
-            server.env = id_env_map.get(&server.base.id).unwrap().clone();
+    
+    backend_servers.into_iter().map(|backend_server| {
+        let is_installed = id_env_map.contains_key(&backend_server.base.id);
+        let env = if is_installed {
+            id_env_map.get(&backend_server.base.id).unwrap().clone()
+        } else {
+            backend_server.command_info.env
+        };
+        
+        FrontendServer {
+            base: backend_server.base,
+            is_installed,
+            env,
+            guide: backend_server.command_info.guide,
         }
-    });
-    debug!("load_all_frontend_servers core: loaded servers");
-    servers
+    }).collect()
 }
 
 pub async fn load_all_installed_frontend_servers(

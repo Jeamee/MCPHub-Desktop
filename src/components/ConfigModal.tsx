@@ -1,9 +1,10 @@
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { open } from '@tauri-apps/plugin-shell';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 interface ConfigModalProps {
     isOpen: boolean
@@ -34,7 +35,24 @@ export function ConfigModal({ isOpen, onClose, env, guide, onSave }: ConfigModal
                     </div>
                     {guide && (
                         <div className="bg-muted/50 rounded-lg p-4 prose dark:prose-invert max-w-none">
-                            <ReactMarkdown>{guide}</ReactMarkdown>
+                            <ReactMarkdown
+                                components={{
+                                    a: ({ node, ...props }) => (
+                                        <a
+                                            {...props}
+                                            onClick={(event: React.MouseEvent) => {
+                                                event.preventDefault();
+                                                if (props.href) {
+                                                    open(props.href);
+                                                }
+                                            }}
+                                            className="text-blue-500 hover:underline cursor-pointer"
+                                        />
+                                    )
+                                }}
+                            >
+                                {guide}
+                            </ReactMarkdown>
                         </div>
                     )}
                 </DialogHeader>
