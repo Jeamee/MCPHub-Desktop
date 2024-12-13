@@ -1,3 +1,4 @@
+import { info } from '@tauri-apps/plugin-log';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 import React from "react";
@@ -10,8 +11,7 @@ function useAutoUpdater() {
       try {
         const update = await check();
         if (update) {
-          console.log(`Update available: ${update.version}`);
-
+          info(`Update available: ${update.version}`);
           await update.downloadAndInstall((event) => {
             switch (event.event) {
               case 'Started':
