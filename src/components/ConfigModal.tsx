@@ -59,6 +59,8 @@ export function ConfigModal({ isOpen, onClose, env, guide, inputArg, onSave }: C
         onSave(config, argValues)
         onClose()
     }
+    console.log(argValues)
+    console.log(inputArg)
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -113,7 +115,7 @@ export function ConfigModal({ isOpen, onClose, env, guide, inputArg, onSave }: C
                                             {inputArg.name}
                                         </Label>
                                         
-                                        {argValues.map((value, index) => (
+                                        {(argValues.length > 0 ? argValues : [""]).map((value, index) => (
                                             <div key={index} className="flex gap-2">
                                                 {inputArg.class === "Text" ? (
                                                     <Input
