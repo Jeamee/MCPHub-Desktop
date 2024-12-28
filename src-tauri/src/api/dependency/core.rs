@@ -6,10 +6,10 @@ use std::fs;
 use std::io::Cursor;
 use tauri_plugin_store::StoreExt;
 use xshell::{cmd, Shell};
-#[cfg(target_os = "macos")]
-use {flate2::read::GzDecoder, tar::Archive};
 #[cfg(target_os = "windows")]
 use zip::ZipArchive;
+#[cfg(target_os = "macos")]
+use {flate2::read::GzDecoder, tar::Archive};
 
 use crate::utils::os::{detect_shell, get_home};
 
@@ -17,7 +17,7 @@ pub struct NpmHandler;
 pub struct UVHandler;
 
 pub struct ResourceHandler;
-const SERVERS_URL: &str = "https://app.mcphub.net/server-configuration/servers.json";
+const SERVERS_URL: &str = "https://app.mcphub.net/server-configuration/servers-v0.1.json";
 
 impl NpmHandler {
     pub async fn detect(app_handle: &tauri::AppHandle) -> Result<bool> {
@@ -229,7 +229,10 @@ impl UVHandler {
             archive.extract(&uv_dir)?;
         }
 
-        store.set("uv_path", format!("{}/uv-{}", uv_dir, uv_arch.split(".").next().unwrap()));
+        store.set(
+            "uv_path",
+            format!("{}/uv-{}", uv_dir, uv_arch.split(".").next().unwrap()),
+        );
         store.set("use_system_uv", false);
         trace!("All done");
         Ok(())
