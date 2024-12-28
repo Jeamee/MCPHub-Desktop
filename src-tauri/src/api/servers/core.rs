@@ -1,9 +1,11 @@
 use crate::utils::os::get_home;
+use std::borrow::Cow;
 use crate::APP_STATE_FILENAME;
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri_plugin_store::StoreExt;
+use shell_escape::escape;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BaseServer {
@@ -246,7 +248,7 @@ pub async fn install_server_function(
     let env = env.unwrap_or_else(|| server.command_info.env.clone());
     if input_arg.is_some() {
         input_arg_config.value = input_arg.unwrap();
-        arg_configs = format!("{} {}", arg_configs, input_arg_config.value.join(" "));
+        arg_configs = format!("{} {}", arg_configs, escape(Cow::from(input_arg_config.value.join(" "))));
     }
 
     let mut config = ClientConfig::load();
