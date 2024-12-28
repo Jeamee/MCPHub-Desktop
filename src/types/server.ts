@@ -1,3 +1,11 @@
+export interface InputArg {
+  name: string
+  description: string
+  class: 'Text' | 'Select' | 'FilePath' | 'DirectoryPath'
+  multiplicity: 'Single' | 'Multiple'
+  value: string[]
+}
+
 interface BaseServerCardData {
   id: string
   title: string
@@ -9,6 +17,7 @@ interface BaseServerCardData {
   isInstalled: boolean,
   env: Record<string, string>
   guide: string
+  inputArg: InputArg
 }
 
 export interface ServerCardData extends BaseServerCardData {

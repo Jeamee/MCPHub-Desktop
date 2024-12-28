@@ -1,6 +1,6 @@
 use crate::utils::os::get_home;
 use crate::APP_STATE_FILENAME;
-use log::debug;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri_plugin_store::StoreExt;
@@ -28,14 +28,19 @@ pub struct FrontendServer {
     #[serde(default)]
     env: HashMap<String, String>,
     #[serde(default)]
+    args: Vec<String>,
+    #[serde(default)]
     guide: String,
+    #[serde(default, rename = "inputArg")]
+    input_arg: InputArg,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct CommandInfo {
-    #[serde(rename = "command")]
+struct SystemCommandInfo {
     command: String,
     args: Vec<String>,
+    #[serde(default, rename = "inputArg")]
+    input_arg: InputArg,
     #[serde(default)]
     env: HashMap<String, String>,
     #[serde(default)]
@@ -47,16 +52,50 @@ pub struct BackendServer {
     #[serde(flatten)]
     base: BaseServer,
     #[serde(rename = "commandInfo")]
-    command_info: CommandInfo,
+    command_info: SystemCommandInfo,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+enum ArgClass {
+    #[default]
+    Text,
+    Select,
+    FilePath,
+    DirectoryPath,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+enum ArgumentMultiplicity {
+    #[default]
+    Single,
+    Multiple,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct InputArg {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    class: ArgClass,
+    #[serde(default)]
+    multiplicity: ArgumentMultiplicity,
+    #[serde(default)]
+    value: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ClientServerConfig {
+pub struct ClientServerConfig {
     #[serde(default)]
     command: String,
     args: Vec<String>,
     #[serde(default)]
     env: HashMap<String, String>,
+    #[serde(rename = "commandCreator", default)]
+    command_creator: String,
+    #[serde(rename = "inputArg", default)]
+    input_arg: InputArg,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,16 +110,16 @@ impl ClientConfig {
     fn config_path() -> std::path::PathBuf {
         #[cfg(target_os = "macos")]
         {
-        get_home()
-            .unwrap()
-            .join("Library/Application Support/Claude/claude_desktop_config.json")
+            get_home()
+                .unwrap()
+                .join("Library/Application Support/Claude/claude_desktop_config.json")
         }
         #[cfg(target_os = "windows")]
         {
-        let appdata = std::env::var("APPDATA").unwrap();
-        std::path::PathBuf::from(appdata)
-            .join("Claude")
-            .join("claude_desktop_config.json")
+            let appdata = std::env::var("APPDATA").unwrap();
+            std::path::PathBuf::from(appdata)
+                .join("Claude")
+                .join("claude_desktop_config.json")
         }
     }
 
@@ -109,7 +148,6 @@ impl ClientConfig {
     }
 }
 
-
 fn get_servers_from_store<T: for<'de> Deserialize<'de>>(app_handle: &tauri::AppHandle) -> Vec<T> {
     let store = app_handle.store(APP_STATE_FILENAME).unwrap();
     let raw_servers_str: String = serde_json::from_value(
@@ -122,41 +160,63 @@ fn get_servers_from_store<T: for<'de> Deserialize<'de>>(app_handle: &tauri::AppH
     servers
 }
 
-pub async fn get_client_server_config() -> HashMap<String, HashMap<String, String>> {
+pub async fn get_client_server_config() -> HashMap<String, ClientServerConfig> {
     debug!("get_client_server_config core");
     let config = ClientConfig::load();
-    let mut id_env_map = HashMap::new();
+    let mut id_config_map = HashMap::new();
     config
         .mcp_servers
-        .iter()
+        .into_iter()
         .for_each(|(title, server_config)| {
-            id_env_map.insert(title.clone(), server_config.env.clone());
+            id_config_map.insert(title, server_config);
         });
     debug!("get_client_server_config core: loaded id_env_map");
-    id_env_map
+    id_config_map
 }
 
 pub async fn load_all_frontend_servers(app_handle: &tauri::AppHandle) -> Vec<FrontendServer> {
     let backend_servers = get_servers_from_store::<BackendServer>(app_handle);
     debug!("load_all_frontend_servers core: loaded servers");
-    let id_env_map = get_client_server_config().await;
+    let id_config_map = get_client_server_config().await;
     debug!("load_all_frontend_servers core: loaded id_env_map");
-    
-    backend_servers.into_iter().map(|backend_server| {
-        let is_installed = id_env_map.contains_key(&backend_server.base.id);
-        let env = if is_installed {
-            id_env_map.get(&backend_server.base.id).unwrap().clone()
-        } else {
-            backend_server.command_info.env
-        };
-        
-        FrontendServer {
-            base: backend_server.base,
-            is_installed,
-            env,
-            guide: backend_server.command_info.guide,
-        }
-    }).collect()
+
+    backend_servers
+        .into_iter()
+        .map(|mut backend_server| {
+            let is_installed = id_config_map.contains_key(&backend_server.base.id);
+            let env = if is_installed {
+                id_config_map
+                    .get(&backend_server.base.id)
+                    .unwrap()
+                    .env
+                    .clone()
+            } else {
+                backend_server.command_info.env
+            };
+
+            let arg_values = if is_installed {
+                id_config_map
+                    .get(&backend_server.base.id)
+                    .unwrap()
+                    .input_arg
+                    .value
+                    .clone()
+            } else {
+                vec![]
+            };
+
+            backend_server.command_info.input_arg.value = arg_values;
+
+            FrontendServer {
+                base: backend_server.base,
+                is_installed,
+                env,
+                guide: backend_server.command_info.guide,
+                args: backend_server.command_info.args,
+                input_arg: backend_server.command_info.input_arg,
+            }
+        })
+        .collect()
 }
 
 pub async fn load_all_installed_frontend_servers(
@@ -173,6 +233,7 @@ pub async fn install_server_function(
     app_handle: &tauri::AppHandle,
     server_id: &str,
     env: Option<HashMap<String, String>>,
+    input_arg: Option<Vec<String>>,
 ) -> bool {
     let mut servers = get_servers_from_store::<BackendServer>(app_handle);
     let server = servers
@@ -180,11 +241,17 @@ pub async fn install_server_function(
         .find(|server| server.base.id == server_id)
         .unwrap();
     let mut command = server.command_info.command.clone();
-    let mut args = server.command_info.args.clone();
+    let mut arg_configs = server.command_info.args.join(" ");
+    let mut input_arg_config = server.command_info.input_arg.clone();
     let env = env.unwrap_or_else(|| server.command_info.env.clone());
+    if input_arg.is_some() {
+        input_arg_config.value = input_arg.unwrap();
+        arg_configs = format!("{} {}", arg_configs, input_arg_config.value.join(" "));
+    }
 
     let mut config = ClientConfig::load();
     let store = app_handle.store(APP_STATE_FILENAME).unwrap();
+    let mut args = vec![];
 
     if command == "npx" {
         let use_system_node = store
@@ -201,7 +268,7 @@ pub async fn install_server_function(
                 command = "sh".to_string();
                 args = vec![
                     "-c".to_string(),
-                    format!("PATH=\"{}:$PATH\" npx {}", node_path, args.join(" ")),
+                    format!("PATH=\"{}:$PATH\" npx {}", node_path, arg_configs),
                 ];
             }
             #[cfg(target_os = "windows")]
@@ -209,7 +276,7 @@ pub async fn install_server_function(
                 command = "cmd".to_string();
                 args = vec![
                     "/c".to_string(),
-                    format!("set PATH=%PATH%;{} && npx {}", node_path, args.join(" ")),
+                    format!("set PATH=%PATH%;{} && npx {}", node_path, arg_configs),
                 ];
             }
         }
@@ -228,7 +295,7 @@ pub async fn install_server_function(
                 command = "sh".to_string();
                 args = vec![
                     "-c".to_string(),
-                    format!("PATH=\"{}:$PATH\" uvx {}", uv_path, args.join(" ")),
+                    format!("PATH=\"{}:$PATH\" uvx {}", uv_path, arg_configs),
                 ];
             }
             #[cfg(target_os = "windows")]
@@ -236,7 +303,7 @@ pub async fn install_server_function(
                 command = "cmd".to_string();
                 args = vec![
                     "/c".to_string(),
-                    format!("set PATH=%PATH%;{} && uvx {}", uv_path, args.join(" ")),
+                    format!("set PATH=%PATH%;{} && uvx {}", uv_path, arg_configs),
                 ];
             }
         }
@@ -244,13 +311,17 @@ pub async fn install_server_function(
 
     config.mcp_servers.insert(
         server_id.to_string(),
-        ClientServerConfig { command, args, env },
+        ClientServerConfig {
+            command,
+            args,
+            env,
+            command_creator: "MCPHub".to_string(),
+            input_arg: input_arg_config,
+        },
     );
     config.save();
     true
 }
-
-
 
 pub async fn uninstall_server_function(server_id: &str) -> bool {
     let mut config = ClientConfig::load();
@@ -262,15 +333,15 @@ pub async fn uninstall_server_function(server_id: &str) -> bool {
 pub async fn update_server_function(
     app_handle: &tauri::AppHandle,
     server_id: &str,
-    env: HashMap<String, String>,
+    env: Option<HashMap<String, String>>,
+    input_arg: Option<Vec<String>>,
 ) -> bool {
     let mut config = ClientConfig::load();
     if !config.mcp_servers.contains_key(server_id) {
-        install_server_function(&app_handle, server_id, Some(env)).await;
+        install_server_function(&app_handle, server_id, env, input_arg).await;
     } else {
-        let server_config = config.mcp_servers.get_mut(server_id).unwrap();
-        server_config.env = env;
-        config.save();
+        uninstall_server_function(server_id).await;
+        install_server_function(&app_handle, server_id, env, input_arg).await;
     }
     true
 }

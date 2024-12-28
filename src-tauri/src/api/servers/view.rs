@@ -19,7 +19,7 @@ pub async fn get_installed_servers(app_handle: tauri::AppHandle) -> Vec<Frontend
 
 #[tauri::command]
 pub async fn install_server(app_handle: tauri::AppHandle, server_id: &str) -> Result<bool, String> {
-    Ok(install_server_function(&app_handle, server_id, None).await)
+    Ok(install_server_function(&app_handle, server_id, None, None).await)
 }
 
 #[tauri::command]
@@ -27,8 +27,9 @@ pub async fn update_server(
     app_handle: tauri::AppHandle,
     server_id: &str,
     env: Option<HashMap<String, String>>,
+    input_arg: Option<Vec<String>>,
 ) -> Result<bool, String> {
-    Ok(update_server_function(&app_handle, server_id, env.unwrap_or_default()).await)
+    Ok(update_server_function(&app_handle, server_id, env, input_arg).await)
 }
 
 #[tauri::command]

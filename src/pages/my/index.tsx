@@ -14,6 +14,7 @@ export default function MyServersPage() {
         ...card,
         publishDate: parseDate(card.publishDate),
       }));
+      console.log('processedCards:', processedCards);
       setServerCards(processedCards);
     };
 

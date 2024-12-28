@@ -20,7 +20,6 @@ export default function DiscoverPage() {
         publishDate: parseDate(card.publishDate),
       }));
       setServerCards(processedCards);
-      console.log("processedCards", processedCards);
     };
 
     fetchServers();
@@ -30,12 +29,15 @@ export default function DiscoverPage() {
     <div className="container mx-auto p-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Discover MCPHub Servers</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {serverCards.map((card, index) => (
-          <ServerCard
-            key={index}
-            {...card}
-          />
-        ))}
+        {serverCards.map((card, index) => {
+          console.log('Card data:', card);
+          return (
+            <ServerCard
+              key={index}
+              {...card}
+            />
+          );
+        })}
       </div>
     </div>
   )

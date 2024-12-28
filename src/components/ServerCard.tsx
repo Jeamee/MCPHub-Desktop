@@ -2,7 +2,7 @@ import { Tag } from "@/components/Tag"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { InstallStatus, ServerCardData } from '@/types/server'
+import type { InstallStatus, ServerCardData } from '@/types/server'
 import { getRelativeTime } from '@/utils/getRelativeTime'
 import { invoke } from "@tauri-apps/api/core"
 import { motion } from 'framer-motion'
@@ -23,17 +23,18 @@ export function ServerCard({
     tags,
     isInstalled,
     env,
-    guide
+    guide,
+    inputArg,
 }: ServerCardProps) {
     const [isHovered, setIsHovered] = useState(false)
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
     const [installStatus, setInstallStatus] = useState<InstallStatus>(isInstalled ? 'installed' : 'install')
     const relativeTime = getRelativeTime(publishDate)
 
-    const handleConfigSave = async (config: Record<string, string>) => {
+    const handleConfigSave = async (config: Record<string, string>, args: string[]) => {
         console.log('Saved config:', config)
         setInstallStatus('installing')
-        await invoke('update_server', { serverId: id, env: config })
+        await invoke('update_server', { serverId: id, env: config , inputArg: args})
         setInstallStatus('installed')
     }
 
@@ -44,7 +45,7 @@ export function ServerCard({
             return;
         }
 
-        if (Object.keys(env).length === 0) {
+        if (Object.keys(env).length === 0 && !inputArg.name) {
             setInstallStatus('installing');
             await invoke('install_server', { serverId: id });
             setInstallStatus('installed');
@@ -104,7 +105,7 @@ export function ServerCard({
                             <h3 className="font-semibold text-base leading-none mb-1">{title}</h3>
                             <p className="text-sm text-muted-foreground">{creator}</p>
                         </div>
-                        {installStatus === 'installed' && Object.keys(env).length > 0 && (
+                        {installStatus === 'installed' && (Object.keys(env).length > 0 || inputArg.name) && (
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -156,6 +157,7 @@ export function ServerCard({
                 onClose={() => setIsConfigModalOpen(false)}
                 env={env}
                 guide={guide}
+                inputArg={inputArg}
                 onSave={handleConfigSave}
             />
         </motion.div>
