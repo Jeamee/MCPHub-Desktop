@@ -14,11 +14,8 @@ MCPHub Desktop is [Model Context Protocol](https://modelcontextprotocol.io/) (MC
 
 
 ## Roadmap
-- [ ] Support [Continue](https://github.com/continuedev/continue)
-- [ ] Support [FireBase Genkit](https://github.com/firebase/genkit)
-- [ ] Support [Zed](https://zed.dev/)
-- [ ] Support [Sourcegraph Cody](https://sourcegraph.com/cody)
-- [ ] Support [GenAIScript](https://microsoft.github.io/genaiscript/reference/scripts/mcp-tools/)
+- [x] Support user custom cmd args like file and directory path.
+- [ ] Support More Clients
 
 And welcome to provide feature suggestion by submit issues!
 
